@@ -12,33 +12,48 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// Handle NFC scanning
-const scanButton = document.getElementById('scanButton');
-scanButton.addEventListener('click', async () => {
-  try {
-    const reader = new NDEFReader();
-    await reader.scan();
+    // Check browser support
+    if ("NDEFReader" in window) {
+      const reader = new NDEFReader();
 
-    reader.addEventListener('reading', async (event) => {
-      const records = event.message.records;
-      const data = parseNFCData(records);
-      await writeDataToFirebase(data);
-      console.log('Data written to Firebase:', data);
-    });
-  } catch (error) {
-    console.error('Error scanning NFC tag:', error);
-  }
-});
+      // Request permission to access NFC hardware
+      reader.scan().then(() => {
+        // User granted permission
+      }).catch((error) => {
+        // User denied permission or NFC not available
+        console.error("Error while scanning:", error);
+      });
 
-// Helper function to parse NFC data
-function parseNFCData(records) {
-  const record = records[0];
-  const data = record.data.textDecoder.decode(record.data.payload);
-  return data;
-}
+      // Read NFC tag data
+      reader.onreading = (event) => {
+        const { records } = event.message;
 
+        // Process the tag data
+        records.forEach((record) => {
+          const { recordType, data } = record;
 
-async function writeDataToFirebase(data) {
-  const ref = database.ref('nfcData');
-  await ref.set(data);
-}
+          // Populate form field with tag data
+          document.getElementById("tagData").value = new TextDecoder().decode(data);
+
+          // Store data to Firebase
+          const tagData = document.getElementById("tagData").value;
+          const dataRef = database.ref("tagData");
+
+          dataRef.push(tagData)
+            .then(() => {
+              console.log("Data stored to Firebase successfully!");
+            })
+            .catch((error) => {
+              console.error("Error storing data to Firebase:", error);
+            });
+        });
+      };
+
+      reader.onerror = (error) => {
+        // Handle any errors while reading
+        console.error("Error while reading:", error);
+      };
+    } else {
+      // Web NFC is not supported
+      console.error("Web NFC is not supported in this browser.");
+    }
