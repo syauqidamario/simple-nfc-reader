@@ -25,35 +25,39 @@ const database = firebase.database();
       });
 
       // Read NFC tag data
-      reader.onreading = (event) => {
-        const { records } = event.message;
+      // Read NFC tag data
+reader.onreading = async (event) => {
+  const { records } = event.message;
 
-        // Process the tag data
-        records.forEach((record) => {
-          const { recordType, data } = record;
+  // Process the tag data
+  for (const record of records) {
+    const { recordType, data } = record;
 
-          // Populate form field with tag data
-          document.getElementById("tagData").value = new TextDecoder().decode(data);
+    // Decode the NFC tag data
+    const decodedData = new TextDecoder().decode(data);
 
-          // Store data to Firebase
-          const tagData = document.getElementById("tagData").value;
-          const dataRef = database.ref("tagData");
+    // Store data to Firebase
+    const dataRef = database.ref("tagData");
+    const newRecordRef = dataRef.push();
 
-          dataRef.push(tagData)
-            .then(() => {
-              console.log("Data stored to Firebase successfully!");
-            })
-            .catch((error) => {
-              console.error("Error storing data to Firebase:", error);
-            });
-        });
-      };
+    // Get the form field values
+    const name = document.getElementById("name").value;
+    const companyName = document.getElementById("companyName").value;
 
-      reader.onerror = (error) => {
-        // Handle any errors while reading
-        console.error("Error while reading:", error);
-      };
-    } else {
-      // Web NFC is not supported
-      console.error("Web NFC is not supported in this browser.");
-    }
+    // Construct the data object to be stored in Firebase
+    const tagData =
+    {
+      name: name,
+      companyName: companyName,
+      nfcData: decodedData,
+    };
+
+    try 
+    {
+      await newRecordRef.set(tagData);
+      console.log("Data stored to Firebase successfully!");
+    } catch (error) 
+    {
+      console.error("Error storing data to Firebase:", error);
+    }}};
+  }
